@@ -14,4 +14,10 @@ The Elman network, also known as the SRN or [Simple Recurrent Network](https://w
 very similar. The difference is that the input to the hidden layer, instead of receiving a copy of the network's output, receives a copy of
 the hidden layer's activity at the previous time step.
 
-The task for this implementation was to learn to recreate a set of hand-drawn traces.
+The task for this implementation was to learn to recreate a set of hand-drawn traces:
+![the figures to be traced](/assets/figures.png)
+
+These traces were drawn by hand and exported into the `.svg` format. I wrote a function (link) to extract a sequence of $(x,y)$ coordinates
+from the svg file, which were stored in Numpy array with roughly 1000 rows and 2 columns. The task of the network was to learn this sequence
+of traces, but due to the noisy nature of hand drawing the network must create limit cycle attractors that roughly follow the mean
+trajectory of the lines.
