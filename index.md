@@ -1,5 +1,5 @@
 ---
-title: Welcome to my blog
+title: Sergio Verduzco's blog
 ---
 
-Basic **Markdown** document.
+Wherein I try to explain the basic ideas for assorted neural networks and whatnot.
