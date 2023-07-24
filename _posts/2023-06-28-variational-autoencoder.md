@@ -53,8 +53,10 @@ Thus you'll have a term $\text{KL}[q(\mathbf{z}) \| p(\mathbf{z})]$ in the decod
 ## Results
 
 I wrote [a version of the VAE](https://github.com/sergio-verduzco/deep_explorations/tree/main/variational) based on equation 7 in [Doersch 2017](https://arxiv.org/pdf/1606.05908.pdf). In particular:
-$$\text{KL}(q(\mathbf{z|\mathbf{x}}) \| \mathcal{N}(\mathbf{0}, I)) =
-\frac{1}{2}\left(\text{tr}(\Sigma(\mathbf{x}) + \mu(\mathbf{x})^T \mu(\mathbf{x}) -k - \text{log det}(\Sigma(\mathbf{x})))  \right)$$
+```math
+\text{KL}(q(\mathbf{z|\mathbf{x}}) \| \mathcal{N}(\mathbf{0}, I)) =
+\frac{1}{2}\left(\text{tr}(\Sigma(\mathbf{x}) + \mu(\mathbf{x})^T \mu(\mathbf{x}) -k - \text{log det}(\Sigma(\mathbf{x})))  \right)
+```
 
 The loss function was the sum of the reconstruction error plus this divergence 
 $$\mathcal{L} = \|\mathbf{x} - \mathbf{\hat{x}} \|^2 +  \text{KL}(q(\mathbf{z|\mathbf{x}}) \| \mathcal{N}(\mathbf{0}, I)) \equiv RE + DE$$
