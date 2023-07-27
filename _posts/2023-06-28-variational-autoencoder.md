@@ -73,7 +73,7 @@ How to fix this?
 A first clue was that the reconstruction error was more than one order of magnitude smaller than the distribution error. My guess is that reducing the reconstruction error too aggressively caused training to enter an attractor from which it couldn't escape, because the escape routes involved increasing RE for a few iterations.
 
 The easy fix was to modify the loss function as
-$$ \mathcal{L} = RE + w \cdot RE $$
+$$ \mathcal{L} = RE + w \cdot DE $$
 where $w=0.001$. This allowed reconstruction of the digits.
 
 ![vae 2D balance](/assets/vae_2D_balanced1.png)

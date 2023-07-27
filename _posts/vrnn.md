@@ -1,6 +1,7 @@
 ---
 title: "Variational Recurrent Neural Network (VRNN)"
 date: 2023-07-14
+usemathjax: true
 ---
 
 In this post I try to explain the ideas behind the Variational Recurrent Neural Network, and convey the experiences from implementing one with PyTorch.
@@ -99,7 +100,10 @@ As with the [VAE](https://sergio-verduzco.github.io/2023/06/28/variational-autoe
 After the code was completed the traces my network produced were random blotches. I assumed there was an error in my code, but going through each line didn't reveal anything. After an embarrassingly long time I realized that the output of my encoder, decoder, and prior networks should **not** use ReLU units in the output layer, because then those output could not be negative...
 
 Once I modified the output of the networks, the VRNN could learn to generate the basic shapes I tested in the [Elman network](https://sergio-verduzco.github.io/2023/07/02/elman_rnn.html)
-post. The interesting part was whether it would succeed with the "circle triangle eight" pattern.
+post. For example, here's how it learned to trace a figure eight:
+
+![eight](/assets/eight10_vrnn_500ep.png)
+The interesting part was whether it would succeed with the "circle triangle eight" pattern.
 
 Here is how my initial looked (1000 points are generated for each trajectory below):
 
@@ -107,7 +111,33 @@ Here is how my initial looked (1000 points are generated for each trajectory bel
 
 The impression I have is that the transition points between patterns are far and few, so it is hard for the network to learn proper $\mathbf{z}_t$ representations. Basically, it is easier to just learn a single trajectory that approaches the points of the single example I provided for the network to learn.
 
-The first modification I used was to use GRU units for the $f_\theta$ network, which may help remember back to the transition points. I hoped that this and a large number of training epochs would do the trick
+The first modification I used was to use GRU units for the $f_\theta$ network, which may help remember back to the transition points. I hoped that this and a large number of training epochs would do the trick. It did not, so I was left to wonder what was the problem.
+
+I wanted the decoder to produce 3 attractors (circle, triangle, eight), and to switch between them based on the latent variable $\mathbf{z}_t$, which would potentially change its value when two cycles of the B pattern (the triangle) were completed. Instead I found a single attractor contorting its shape to match the original trace.
+
+It didn't seem like the latent variable was learning the transition points between patterns, and this should not be so surprising considering how sparse they are. My next move was to increase the training data, introducing 8 traces, each one with 5 to 10 transitions between patterns. This, together with GRU units, a VRNN with large layers, and enough training epochs should do the trick...
+
+![8 training patterns](/assets/cte_gru_8tp_6800ep.png)
+
+No, it didn't do the trick. What now?
+
+One thing I noticed is that the loss had become really small ($\approx$ 0.0001), both for the reconstruction error, and for $w$ times the KL divergence. The loss in the distribution of $\mathbf{z}$ was small, and yet the performance was poor. Perhaps setting $w$ so that $\frac{w \cdot DE}{RE} \approx 1$ was not so good in this case (see the VAE post). As a first variation I tried to set the initial $w=0$ value, and then adjust $w$ adaptive to approach the ratio $\frac{w \cdot DE}{RE} \approx 10$.
+
+Another observation is that the circle-triangle-eight trajectory with two cycles of each shape is a challenging figure to trace. Given my lack of success, it may be better to try a simpler pattern, which I did.
+
+For the next round of attempts I used the following "eye" pattern:
+
+![eye pattern](/assets/long_eye.png)
+
+In this pattern when the pen is at the top, with probability 2/3 a wide oval will be traced, and with probability 1/3 a thin oval will be traced. Around 30 of these transitions were included in a single figure. Results from learning this pattern can be seen below.
+
+![eye results](/assets/eye_vrnn_gru_1100ep.png)
+
+A this point I had this thought: a network that only traces the wide oval will reduce the loss just as much as a network that traces the wide oval with probability 2/3, and the thin oval with probability 1/3.
+
+Because generation is stochastic, a "perfect" model only has probability 5/9 of matching the training data on any given cycle: the model matches the training data when 1) both are wide (with probability 4/9), and 2) both are thin (with probability 1/9). On the other hand, a "lazy" model that only traces the wide ovals will match the training data 66% of the time. This argument ignores differences in the phase caused by the thin oval being smaller, but those should be similar for both models.
+
+In light of this, the reconstruction loss is not sufficient for learning the type of model we desire. Something must pressure the discovery of "transitions between patterns" at particular points.
 
 
 
