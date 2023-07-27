@@ -2,6 +2,9 @@ theme: so-simple-theme
 title: Deep Explorations
 author: Sergio Verduzco
 description: Neural networks and whatnot.
+kramdown:
+  math_engine: mathjax
+  syntax_highlighter: rouge
 mathjax:
   enable: true
 markdown: kramdown
