@@ -1,6 +1,7 @@
 ---
 title: "The variational autoencoder from scratch: an exercise in balance"
 date: 2023-06-28
+usemathjax: true
 ---
 
 In this post I wrote some thoughts on what the Variational Autoencoder (VAE) is supposed to do, and on ideas I got while programming it from scratch.
