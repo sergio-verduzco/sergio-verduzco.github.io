@@ -2,3 +2,4 @@ theme: minima
 title: Deep Explorations
 author: Sergio Verduzco
 description: Neural networks and whatnot.
+markdown: kramdown
