@@ -1,6 +1,8 @@
-remote-theme: pages-themes/cayman@v0.2.0
+remote-theme: alshedivat/al-folio
 plugins:
 - jekyll-remote-theme
+url: https://sergio-verduzco.github.io
+baseurl:
 title: Deep Explorations
 author: Sergio Verduzco
 description: Neural networks and whatnot.

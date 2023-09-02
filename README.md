@@ -1,1 +1,2 @@
-Come in, have some tales of source code.
+These are tales of source code that I've written, mostly for education.
+
