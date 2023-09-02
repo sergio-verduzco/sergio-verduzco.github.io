@@ -20,7 +20,7 @@ Some people get excited about learning a distribution and sampling from it. Perh
 
 An approach to make distributions tractable is to extract *latent variables*. Ideally, these variables are related to the process that generates the $\mathbf{x}$ data points, and can encode their distribution with dramatically reduced dimensionality. For example, if the data points are images of digits, a single variable with the identity of the digit (0-9) would go a long way in capturing the relevant information in the image.
 
-Working with latent variables (denoted here by $\mathbf{z}$) has at least two big challenges. The first is deciding what the variable will encode. Which features can capture the information in the training data?. The second challenge is to obtain the distribution $p(\mathbf{z})$. Obtaining this distribution is important because once you know it you can take samples of $\mathbf{z}$, and with with the help of a *decoder* (mapping values of $\mathbf{z}$ to their corresponding value of $\mathbf{x}$) you can generate synthetic data, as if you were sampling from $p(\mathbf{x})$.
+Working with latent variables (denoted here by $\mathbf{z}$) has at least two big challenges. The first is deciding what the variable will encode. Which features can capture the information in the training data? The second challenge is to obtain the distribution $p(\mathbf{z})$. Obtaining this distribution is important because once you know it you can take samples of $\mathbf{z}$, and with with the help of a *decoder* (mapping values of $\mathbf{z}$ to their corresponding value of $\mathbf{x}$) you can generate synthetic data, as if you were sampling from $p(\mathbf{x})$.
 
 ## The VAE
 

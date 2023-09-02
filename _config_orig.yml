@@ -1,0 +1,14 @@
+remote-theme: alshedivat/al-folio
+plugins:
+- jekyll-remote-theme
+url: https://sergio-verduzco.github.io
+baseurl:
+title: Deep Explorations
+author: Sergio Verduzco
+description: Neural networks and whatnot.
+kramdown:
+  math_engine: mathjax
+  syntax_highlighter: rouge
+mathjax:
+  enable: true
+markdown: kramdown
