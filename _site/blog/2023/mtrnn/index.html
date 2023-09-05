@@ -17,4 +17,241 @@
   MathJax.Hub.Register.MessageHook("TeX Jax - parse error",function (message) {
         alert("Math Processing Error: "+message[1]);
       });
-</script> <script type="text/javascript" async src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML"></script> <div class="post"> <header class="post-header"> <h1 class="post-title">Multiple-Timescales Recurrent Neural Networks (MTRNNs)</h1> <p class="post-meta">July 3, 2023</p> <p class="post-tags"> <a href="/blog/2023"> <i class="fas fa-calendar fa-sm"></i> 2023 </a> </p> </header> <article class="post-content"> <div id="markdown-content"> <h2 id="introduction">Introduction</h2> <p>This post is a continuation of my previous post on <a href="https://sergio-verduzco.github.io/2023/07/02/elman_rnn.html">Elman networks</a>.</p> <p>The MTRNN is a network architecture capable of learning long time dependencies more effectively than an Elman network. This architecture is described in <a href="https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1000220#s4" rel="external nofollow noopener" target="_blank">Yamashita and Tani 2010</a>, <strong>Emergence of Functional Hierarchy in a Multiple Timescale Neural Network Model: A Humanoid Robot Experiment</strong>.</p> <p>This is very similar to a cascade of Elman or Jordan recurrent networks, with the key difference that the networks are now considered to operate in continuous time, and the units in the higher levels have slower (larger) time constants.</p> <p>I made a simple adaptation of the network in Yamshita and Tani 2010 for the problem of learning traces (sequences of 2D coordinates). The basic architecture is in the next figure.</p> <p><img src="/assets/img/mtrnn.png" alt="mtrnn adaptation"></p> <p>As in the Elman RNN post, the input to the network is a sequence of $(x, y)$ coordinates, and the output is a prediction of the coordinates $(x’, y’)$ at the next time step. L0 is a fully-connected layer, using $tanh$ nonlinearities in this implementation. L1 is a linear layer. H0 and H1 are Elman RNN cells with fast and slow timescales, respectively.</p> <p>A difference with the Yamashita and Tani 2010 network is that in here outputs come from a linear layer, rather than a softmax layer. Moreover, H0 and H1 each consist of a single layer, and they update after applying the $tanh$ nonlinearity. In other words, if $\mathbf{h}_i$ denotes the activation vector of the units in hidden layer $i$, the update steps are described by:</p> \[\mathbf{h}_i^* = \tanh \left( \mathbf{W_i I_i} \right)\] \[\mathbf{h}_i \leftarrow \left( 1 - \frac{1}{\tau_i} \right) \mathbf{h}_i + \frac{1}{\tau_i} \mathbf{h}_i^*\] <p>Where $\mathbf{W}_i$ and $\mathbf{I}_i$ are respectively the weight matrix and input vector for hidden layer $i$. As a curious note, initially I made a mistake when wrting the equations to update the activity, so the update was: $\mathbf{h}_i \leftarrow \left( 1 - \frac{1}{\tau_i} \right) \mathbf{h}_i^*$. The network with this update rule could still learn to approximate circles, triangles, and with some work even figure eights. This is probably because the network with these update equations is like two stacked Elman networks with some error in the activation. It serves to illustrate a valuable lesson, so I threw this result in an Appendix at the bottom of this post.</p> <p>Going back to the network with the correct equations, I used layer sizes of 10, 40, 8 for L0, H0, and H1, respectively. The time constant for H0 was 4, and the one for H1 was 80. The optimizer was Adam with time constant 3e-4.</p> <h2 id="results">Results</h2> <p>Like the Elman network, the MTRNN could learn to trace circles, triangles, and infinity symbols. This is very similar to the case with the Elman network, so I’ll only show a single result.</p> <p>In this case it can be seen that the self-intersection does not prevent learning. The attractors produced by the Elman network seemed “cleaner”, however. It is possible that the MTRNN, with its higher memory capacity, was learning to reproduce some of the quirks in the hand-drawn image (overfitting).</p> <p><img src="/assets/img/eight10_mtrnn.png" alt="figure eight results"></p> <p>Training for a longer period suggests that this may be the case. The attractors produced by the Elman network seemed to be limit cycles whose period coincided with the periodicity of the trajectory in the drawing. In the case of the MTRNN, the attractor seems to be a limit cycle that spans several loops (the original trace contains 10 loops).</p> <p><img src="/assets/img/eight10_mtrnn_long_train.png" alt="figure eight results 2"></p> <p>The more interesting part is the trace where the side switches every few revolutions, requiring a longer memory of the trajectory. The result for this case can be seen below.</p> <p><img src="/assets/img/switch_circle2_circle2_6600_mtrnn.png" alt="switch results"></p> <p>After 6600 epochs the trajectory switched sides while still making a loop, which made the plot messy. But clearly this was not separate attractors on each side, as in the case of the Elman network. There was a single attractor that for initial states with zeros in the hidden layers started its trajectory by looping on the left side, and then shifted to the right. Partial trajectories for a few initial states can be seen in the figure below.</p> <p><img src="/assets/img/switch_circle2_circle2_6600_mtrnn_ics.png" alt="switch results 2"></p> <h2 id="some-thoughts">Some thoughts</h2> <p>I did very little in terms of optimizing these hyperparameters but I still came out wondering whether there is a principled way to obtain good values for the various time constants. Perhaps along the lines of extracting the Fourier coefficients of the incoming inputs. Large coefficients for slow frequencies would cause time constants to increase, etc.</p> <h2 id="appendix-incorrect-equations-but-so-so-results">Appendix: Incorrect equations, but so-so results</h2> <p>Before I realized that my MTRNN had the wrong equations I tried to teach it a pattern consisting of 5 circular revolutions on the left, followed by 5 revolutions on the right, then back to the left, and so on.</p> <p>The network was reducing the error during training, but it became clear that when generating trajectories it didn’t learn to complete 5 revolutions on one side, and then go to the other side. This prompted me to increase the number of epochs. After 10000 epochs the error reached a very small value (~8e-05), and the results can be seen below:</p> <p><img src="/assets/img/switch_circle5_circle5_long_train.png" alt="traces_long_train"> <img src="/assets/img/switch_circle5_circle5_long_train2.png" alt="many initial conditions"></p> <p>It can be observed that the network learned to trace multiple revolutions on the left, before finally settling on the limit-cycle attractor on the right, from which it can’t escape. This is still not the desired pattern, but an interesting approximation nonetheless.</p> <p>One thing this example shows is that the ability of backpropagation to reduce the loss can mask errors in the code. In the words of Andrej Karpathy:</p> <blockquote> <p>It is a depressing fact that your network will typically still train okay…</p> </blockquote> <p>That’s one reason he recommends an evaluation skeleton and many sanity checks in his <a href="https://karpathy.github.io/2019/04/25/recipe/" rel="external nofollow noopener" target="_blank">Recipe for Training Neural Networks</a>.</p> </div> </article> </div> </div> <footer class="fixed-bottom"> <div class="container mt-0"> © Copyright 2023 Sergio O. Verduzco. Powered by <a href="https://jekyllrb.com/" target="_blank" rel="external nofollow noopener">Jekyll</a> with <a href="https://github.com/alshedivat/al-folio" rel="external nofollow noopener" target="_blank">al-folio</a> theme. Hosted by <a href="https://pages.github.com/" target="_blank" rel="external nofollow noopener">GitHub Pages</a>. </div> </footer> <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js" integrity="sha256-fgLAgv7fyCGopR/gBNq2iW3ZKIdqIcyshnUULC4vex8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/mdbootstrap@4.20.0/js/mdb.min.js" integrity="sha256-NdbiivsvWt7VYCt6hYNT3h/th9vSTL4EDWeGs5SN3DA=" crossorigin="anonymous"></script> <script defer src="https://cdn.jsdelivr.net/npm/masonry-layout@4.2.2/dist/masonry.pkgd.min.js" integrity="sha256-Nn1q/fx0H7SNLZMQ5Hw5JLaTRZp0yILA/FRexe19VdI=" crossorigin="anonymous"></script> <script defer src="https://cdn.jsdelivr.net/npm/imagesloaded@4/imagesloaded.pkgd.min.js"></script> <script defer src="/assets/js/masonry.js" type="text/javascript"></script> <script defer src="https://cdn.jsdelivr.net/npm/medium-zoom@1.0.8/dist/medium-zoom.min.js" integrity="sha256-7PhEpEWEW0XXQ0k6kQrPKwuoIomz8R8IYyuU1Qew4P8=" crossorigin="anonymous"></script> <script defer src="/assets/js/zoom.js"></script> <script defer src="https://unpkg.com/bootstrap-table@1.21.4/dist/bootstrap-table.min.js"></script> <script src="/assets/js/no_defer.js?d633890033921b33e0ceb13d22340a9c"></script> <script defer src="/assets/js/common.js?acdb9690d7641b2f8d40529018c71a01"></script> <script defer src="/assets/js/copy_code.js?c9d9dd48933de3831b3ee5ec9c209cac" type="text/javascript"></script> <script async src="https://d1bxh8uas1mnw7.cloudfront.net/assets/embed.js"></script> <script async src="https://badge.dimensions.ai/badge.js"></script> <script type="text/javascript">window.MathJax={tex:{tags:"ams"}};</script> <script defer type="text/javascript" id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js"></script> <script defer src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script> <script type="text/javascript">function progressBarSetup(){"max"in document.createElement("progress")?(initializeProgressElement(),$(document).on("scroll",function(){progressBar.attr({value:getCurrentScrollPosition()})}),$(window).on("resize",initializeProgressElement)):(resizeProgressBar(),$(document).on("scroll",resizeProgressBar),$(window).on("resize",resizeProgressBar))}function getCurrentScrollPosition(){return $(window).scrollTop()}function initializeProgressElement(){let e=$("#navbar").outerHeight(!0);$("body").css({"padding-top":e}),$("progress-container").css({"padding-top":e}),progressBar.css({top:e}),progressBar.attr({max:getDistanceToScroll(),value:getCurrentScrollPosition()})}function getDistanceToScroll(){return $(document).height()-$(window).height()}function resizeProgressBar(){progressBar.css({width:getWidthPercentage()+"%"})}function getWidthPercentage(){return getCurrentScrollPosition()/getDistanceToScroll()*100}const progressBar=$("#progress");window.onload=function(){setTimeout(progressBarSetup,50)};</script> </body> </html>
+</script>
+<script type="text/javascript" async src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+<div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">Multiple-Timescales Recurrent Neural Networks (MTRNNs)</h1>
+    <p class="post-meta">July 3, 2023</p>
+    <p class="post-tags">
+      <a href="/blog/2023"> <i class="fas fa-calendar fa-sm"></i> 2023 </a>
+
+    </p>
+  </header>
+
+  <article class="post-content">
+    
+    <div id="markdown-content">
+      <h2 id="introduction">Introduction</h2>
+
+<p>This post is a continuation of my previous post on <a href="https://sergio-verduzco.github.io/2023/07/02/elman_rnn.html" rel="external nofollow noopener" target="_blank">Elman networks</a>.</p>
+
+<p>The MTRNN is a network architecture capable of learning long time dependencies more effectively than an Elman network.
+This architecture is described in <a href="https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1000220#s4" rel="external nofollow noopener" target="_blank">Yamashita and Tani 2010</a>, 
+<strong>Emergence of Functional Hierarchy in a Multiple Timescale Neural Network Model: A Humanoid Robot Experiment</strong>.</p>
+
+<p>This is very similar to a cascade of Elman or Jordan recurrent networks, with the key difference that the networks are now considered
+to operate in continuous time, and the units in the higher levels have slower (larger) time constants.</p>
+
+<p>I made a simple adaptation of the network in Yamshita and Tani 2010 for the problem of learning traces (sequences of 2D coordinates).
+The basic architecture is in the next figure.</p>
+
+<p><img src="/assets/img/mtrnn.png" alt="mtrnn adaptation"></p>
+
+<p>As in the Elman RNN post, the input to the network is a sequence of $(x, y)$ coordinates, and the output is a prediction of the coordinates $(x’, y’)$  at the next
+time step. L0 is a fully-connected layer, using $tanh$ nonlinearities in this implementation. L1 is a linear layer. H0 and H1 are Elman RNN
+cells with fast and slow timescales, respectively.</p>
+
+<p>A difference with the Yamashita and Tani 2010 network is that in here outputs come from a linear layer, rather than a softmax layer.
+Moreover, H0 and H1 each consist of a single layer, and they update after applying the $tanh$ nonlinearity. In other words, if
+$\mathbf{h}_i$ denotes the activation vector of the units in hidden layer $i$, the update steps are described by:</p>
+
+\[\mathbf{h}_i^* = \tanh \left( \mathbf{W_i I_i} \right)\]
+
+\[\mathbf{h}_i \leftarrow \left( 1 - \frac{1}{\tau_i} \right) \mathbf{h}_i + \frac{1}{\tau_i} \mathbf{h}_i^*\]
+
+<p>Where $\mathbf{W}_i$ and $\mathbf{I}_i$ are respectively the weight matrix and input vector for hidden layer $i$.
+As a curious note, initially I made a mistake when wrting the equations to update the activity, so the update was:
+$\mathbf{h}_i \leftarrow \left( 1 - \frac{1}{\tau_i} \right) \mathbf{h}_i^*$.
+The network with this update rule could still learn to approximate circles, triangles, and with some work even figure eights. This is
+probably because the network with these update equations is like two stacked Elman networks with some error in the
+activation. It serves to illustrate a valuable lesson, so I threw this result in an Appendix at the bottom of this post.</p>
+
+<p>Going back to the network with the correct equations, I used layer sizes of 10, 40, 8 for L0, H0, and H1, respectively.
+The time constant for H0 was 4, and the one for H1 was 80. The optimizer was Adam with time constant 3e-4.</p>
+
+<h2 id="results">Results</h2>
+
+<p>Like the Elman network, the MTRNN could learn to trace circles, triangles, and infinity symbols. This is very similar to the case with the Elman network, so I’ll only show a single result.</p>
+
+<p>In this case it can be seen that the self-intersection does not prevent learning. The attractors produced by the Elman network seemed “cleaner”, however. It is possible that the MTRNN, with its higher memory capacity, was learning to reproduce some of the quirks in the hand-drawn image (overfitting).</p>
+
+<p><img src="/assets/img/eight10_mtrnn.png" alt="figure eight results"></p>
+
+<p>Training for a longer period suggests that this may be the case. The attractors produced by the Elman network seemed to be limit cycles whose period coincided with the periodicity of the trajectory in the drawing. In the case of the MTRNN, the attractor seems to be a limit cycle that spans several loops (the original trace contains 10 loops).</p>
+
+<p><img src="/assets/img/eight10_mtrnn_long_train.png" alt="figure eight results 2"></p>
+
+<p>The more interesting part is the trace where the side switches every few revolutions, requiring a longer memory of the trajectory. The result for this case can be seen below.</p>
+
+<p><img src="/assets/img/switch_circle2_circle2_6600_mtrnn.png" alt="switch results"></p>
+
+<p>After 6600 epochs the trajectory switched sides while still making a loop, which made the plot messy. But clearly this was not separate attractors on each side, as in the case of the Elman network. There was a single attractor that for initial states with zeros in the hidden layers started its trajectory by looping on the left side, and then shifted to the right. Partial trajectories for a few initial states can be seen in the figure below.</p>
+
+<p><img src="/assets/img/switch_circle2_circle2_6600_mtrnn_ics.png" alt="switch results 2"></p>
+
+<h2 id="some-thoughts">Some thoughts</h2>
+<p>I did very little in terms of optimizing these hyperparameters but I still came out wondering whether there is a principled way to obtain good values for the various time constants. Perhaps along the lines of extracting the Fourier coefficients of the incoming inputs. Large coefficients for slow frequencies would cause time constants to increase, etc.</p>
+
+<h2 id="appendix-incorrect-equations-but-so-so-results">Appendix: Incorrect equations, but so-so results</h2>
+
+<p>Before I realized that my MTRNN had the wrong equations I tried to teach it a pattern consisting of 5 circular revolutions on the left, followed by 5 revolutions on the right, then back to the left, and so on.</p>
+
+<p>The network was reducing the error during training, but it became clear that when generating trajectories it didn’t learn to complete 5 revolutions on one side, and then go to the other side. This prompted me to increase the number of epochs. After 10000 epochs the error reached a very small value (~8e-05), and the results
+can be seen below:</p>
+
+<p><img src="/assets/img/switch_circle5_circle5_long_train.png" alt="traces_long_train">
+<img src="/assets/img/switch_circle5_circle5_long_train2.png" alt="many initial conditions"></p>
+
+<p>It can be observed that the network learned to trace multiple revolutions on the left, before finally settling on the limit-cycle
+attractor on the right, from which it can’t escape. This is still not the desired pattern, but an interesting approximation nonetheless.</p>
+
+<p>One thing this example shows is that the ability of backpropagation to reduce the loss can mask errors in the code. In the words of Andrej Karpathy:</p>
+
+<blockquote>
+  <p>It is a depressing fact that your network will typically still train okay…</p>
+</blockquote>
+
+<p>That’s one reason he recommends an evaluation skeleton and many sanity checks in his <a href="https://karpathy.github.io/2019/04/25/recipe/" rel="external nofollow noopener" target="_blank">Recipe for Training Neural Networks</a>.</p>
+
+
+    </div>
+  </article>
+</div>
+
+      
+    </div>
+
+    <!-- Footer -->    
+    <footer class="fixed-bottom">
+      <div class="container mt-0">
+        © Copyright 2023 Sergio O. Verduzco. Powered by <a href="https://jekyllrb.com/" target="_blank" rel="external nofollow noopener">Jekyll</a> with <a href="https://github.com/alshedivat/al-folio" rel="external nofollow noopener" target="_blank">al-folio</a> theme. Hosted by <a href="https://pages.github.com/" target="_blank" rel="external nofollow noopener">GitHub Pages</a>.
+
+      </div>
+    </footer>
+
+    <!-- JavaScripts -->
+    <!-- jQuery -->
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+
+    <!-- Bootsrap & MDB scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js" integrity="sha256-fgLAgv7fyCGopR/gBNq2iW3ZKIdqIcyshnUULC4vex8=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mdbootstrap@4.20.0/js/mdb.min.js" integrity="sha256-NdbiivsvWt7VYCt6hYNT3h/th9vSTL4EDWeGs5SN3DA=" crossorigin="anonymous"></script>
+
+    <!-- Masonry & imagesLoaded -->
+  <script defer src="https://cdn.jsdelivr.net/npm/masonry-layout@4.2.2/dist/masonry.pkgd.min.js" integrity="sha256-Nn1q/fx0H7SNLZMQ5Hw5JLaTRZp0yILA/FRexe19VdI=" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/imagesloaded@4/imagesloaded.pkgd.min.js"></script>
+  <script defer src="/assets/js/masonry.js" type="text/javascript"></script>
+    
+  <!-- Medium Zoom JS -->
+  <script defer src="https://cdn.jsdelivr.net/npm/medium-zoom@1.0.8/dist/medium-zoom.min.js" integrity="sha256-7PhEpEWEW0XXQ0k6kQrPKwuoIomz8R8IYyuU1Qew4P8=" crossorigin="anonymous"></script>
+  <script defer src="/assets/js/zoom.js"></script>
+
+  <!-- Bootstrap Table -->
+  <script defer src="https://unpkg.com/bootstrap-table@1.21.4/dist/bootstrap-table.min.js"></script>
+
+  <!-- Load Common JS -->
+  <script src="/assets/js/no_defer.js?d633890033921b33e0ceb13d22340a9c"></script>
+  <script defer src="/assets/js/common.js?acdb9690d7641b2f8d40529018c71a01"></script>
+  <script defer src="/assets/js/copy_code.js?c9d9dd48933de3831b3ee5ec9c209cac" type="text/javascript"></script>
+
+    
+  <script async src="https://d1bxh8uas1mnw7.cloudfront.net/assets/embed.js"></script>
+  <script async src="https://badge.dimensions.ai/badge.js"></script>
+
+    <!-- MathJax -->
+  <script type="text/javascript">
+    window.MathJax = {
+      tex: {
+        tags: 'ams'
+      }
+    };
+  </script>
+  <script defer type="text/javascript" id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js"></script>
+  <script defer src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+
+    
+    
+
+<!-- Scrolling Progress Bar -->
+<script type="text/javascript">
+  /*
+   * This JavaScript code has been adapted from the article 
+   * https://css-tricks.com/reading-position-indicator/ authored by Pankaj Parashar, 
+   * published on the website https://css-tricks.com on the 7th of May, 2014.
+   * Couple of changes were made to the original code to make it compatible 
+   * with the `al-foio` theme.
+   */
+  const progressBar = $("#progress");
+  /*
+   * We set up the bar after all elements are done loading.
+   * In some cases, if the images in the page are larger than the intended
+   * size they'll have on the page, they'll be resized via CSS to accomodate
+   * the desired size. This mistake, however, breaks the computations as the
+   * scroll size is computed as soon as the elements finish loading.
+   * To account for this, a minimal delay was introduced before computing the
+   * values.
+   */
+  window.onload = function () {
+    setTimeout(progressBarSetup, 50);
+  };
+  /*
+   * We set up the bar according to the browser.
+   * If the browser supports the progress element we use that.
+   * Otherwise, we resize the bar thru CSS styling
+   */
+  function progressBarSetup() {
+    if ("max" in document.createElement("progress")) {
+      initializeProgressElement();
+      $(document).on("scroll", function() {
+        progressBar.attr({ value: getCurrentScrollPosition() });
+      });
+      $(window).on("resize", initializeProgressElement);
+    } else {
+      resizeProgressBar();
+      $(document).on("scroll", resizeProgressBar);
+      $(window).on("resize", resizeProgressBar);
+    }
+  }
+  /*
+   * The vertical scroll position is the same as the number of pixels that
+   * are hidden from view above the scrollable area. Thus, a value > 0 is
+   * how much the user has scrolled from the top
+   */
+  function getCurrentScrollPosition() {
+    return $(window).scrollTop();
+  }
+
+  function initializeProgressElement() {
+    let navbarHeight = $("#navbar").outerHeight(true);
+    $("body").css({ "padding-top": navbarHeight });
+    $("progress-container").css({ "padding-top": navbarHeight });
+    progressBar.css({ top: navbarHeight });
+    progressBar.attr({
+      max: getDistanceToScroll(),
+      value: getCurrentScrollPosition(),
+    });
+  }
+  /*
+   * The offset between the html document height and the browser viewport
+   * height will be greater than zero if vertical scroll is possible.
+   * This is the distance the user can scroll
+   */
+  function getDistanceToScroll() {
+    return $(document).height() - $(window).height();
+  }
+
+  function resizeProgressBar() {
+    progressBar.css({ width: getWidthPercentage() + "%" });
+  }
+  // The scroll ratio equals the percentage to resize the bar
+  function getWidthPercentage() {
+    return (getCurrentScrollPosition() / getDistanceToScroll()) * 100;
+  }
+</script>
+
+  </body>
+</html>
