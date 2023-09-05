@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <!-- Head -->
+  <head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">    <!-- Metadata, OpenGraph and Schema.org -->
+    
+
+    <!-- Standard metadata -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Variational Recurrent Neural Network (VRNN): not your regular RNN | Sergio Verduzco</title>
+    <meta name="author" content="Sergio O. Verduzco">
+    <meta name="description" content="Neural networks and whatnot.
+">
+    <meta name="keywords" content="deep-learning, neural-networks, python, jupyter">
+
+
+    <!-- Bootstrap & MDB -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-DF7Zhf293AJxJNTmh5zhoYYIMs2oXitRfBjY+9L//AY=" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mdbootstrap@4.20.0/css/mdb.min.css" integrity="sha256-jpjYvU3G3N6nrrBwXJoVEYI/0zw8htfFnhT9ljN3JJw=" crossorigin="anonymous">
+
+    <!-- Bootstrap Table -->
+    <link defer rel="stylesheet" href="https://unpkg.com/bootstrap-table@1.21.4/dist/bootstrap-table.min.css">
+
+    <!-- Fonts & Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" integrity="sha256-HtsXJanqjKTc8vVQjO4YMhiqFoXkfBsjBWcX91T1jr8=" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/academicons@1.9.1/css/academicons.min.css" integrity="sha256-i1+4qU2G2860dGGIOJscdC30s9beBXjFfzjWLjBRsBg=" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Roboto+Slab:100,300,400,500,700|Material+Icons">
+
+    <!-- Code Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jwarby/jekyll-pygments-themes@master/github.css" media="" id="highlight_theme_light">
+
+    
+
+    <!-- Styles -->
+    
+    <link rel="shortcut icon" href="data:image/svg+xml,&lt;svg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20100%20100%22&gt;&lt;text%20y=%22.9em%22%20font-size=%2290%22&gt;%E2%9A%9B%EF%B8%8F&lt;/text&gt;&lt;/svg&gt;">
+    
+    <link rel="stylesheet" href="/assets/css/main.css?d41d8cd98f00b204e9800998ecf8427e">
+    <link rel="canonical" href="http://localhost:4000/blog/2023/vrnn/">
+
+    <!-- Dark Mode -->
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jwarby/jekyll-pygments-themes@master/native.css" media="none" id="highlight_theme_dark">
+    <script src="/assets/js/theme.js?96d6b3e1c3604aca8b6134c7afdd5db6"></script>
+    <script src="/assets/js/dark_mode.js?9b17307bb950ffa2e34be0227f53558f"></script>
+    
+
+  </head>
+
+  <!-- Body -->
+  <body class="fixed-top-nav ">
+
+    <!-- Header -->
+    <header>
+
+      <!-- Nav Bar -->
+      <nav id="navbar" class="navbar navbar-light navbar-expand-sm fixed-top">
+        <div class="container">
+          <a class="navbar-brand title font-weight-lighter" href="/">Sergio Verduzco</a>
+          <!-- Navbar Toggle -->
+          <button class="navbar-toggler collapsed ml-auto" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar top-bar"></span>
+            <span class="icon-bar middle-bar"></span>
+            <span class="icon-bar bottom-bar"></span>
+          </button>
+
+          <div class="collapse navbar-collapse text-right" id="navbarNav">
+            <ul class="navbar-nav ml-auto flex-nowrap">
+
+              <!-- About -->
+              <li class="nav-item ">
+                <a class="nav-link" href="/">about</a>
+              </li>
+              
+              <!-- Blog -->
+              <li class="nav-item active">
+                <a class="nav-link" href="/blog/">blog<span class="sr-only">(current)</span></a>
+              </li>
+
+              <!-- Other pages -->
+              <li class="nav-item ">
+                <a class="nav-link" href="/publications/">publications</a>
+              </li>
+              <li class="nav-item ">
+                <a class="nav-link" href="/repositories/">repositories</a>
+              </li>
+
+              <!-- Toogle theme mode -->
+              <li class="toggle-container">
+                <button id="light-toggle" title="Change theme">
+                  <i class="fas fa-moon"></i>
+                  <i class="fas fa-sun"></i>
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Scrolling Progress Bar -->
+      <progress id="progress" value="0">
+        <div class="progress-container">
+          <span class="progress-bar"></span>
+        </div>
+      </progress>
+    </header>
+
+
+    <!-- Content -->
+    <div class="container mt-5">
+      
+        <!-- _layouts/post.html -->
+
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+      TeX: {
+        equationNumbers: {
+          autoNumber: "AMS"
+        }
+      },
+      tex2jax: {
+      inlineMath: [ ['$', '$'] ],
+      displayMath: [ ['$$', '$$'], ['\\[', '\\]'] ],
+      processEscapes: true,
+    }
+  });
+  MathJax.Hub.Register.MessageHook("Math Processing Error",function (message) {
+        alert("Math Processing Error: "+message[1]);
+      });
+  MathJax.Hub.Register.MessageHook("TeX Jax - parse error",function (message) {
+        alert("Math Processing Error: "+message[1]);
+      });
+</script>
+<script type="text/javascript" async src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+<div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">Variational Recurrent Neural Network (VRNN): not your regular RNN</h1>
+    <p class="post-meta">July 14, 2023</p>
+    <p class="post-tags">
+      <a href="/blog/2023"> <i class="fas fa-calendar fa-sm"></i> 2023 </a>
+
+    </p>
+  </header>
+
+  <article class="post-content">
+    
+    <div id="markdown-content">
+      <p>In this post I try to explain the ideas behind the Variational Recurrent Neural Network, and convey the experiences from implementing one with PyTorch.</p>
+
+<p>Rather than getting to the point, I relate the beginner errors I introduced into my program, which frustrated me for days. Also I write some of the rambling ideas I had during the process.</p>
+
+<h2 id="introduction">Introduction</h2>
+
+<p>In two <a href="https://sergio-verduzco.github.io/2023/07/02/elman_rnn.html" rel="external nofollow noopener" target="_blank">previous</a> <a href="https://sergio-verduzco.github.io/2023/07/03/mtrnn.html" rel="external nofollow noopener" target="_blank">posts</a> I played with RNNs for modeling sequential data. In particular, these networks could learn attractors that required significant memory of previous states.</p>
+
+<p>The RNNs I used, when recursively generating sequential data (when the output from time $t-1$ became the input at time $t$), constituted deterministic discrete dynamical systems. They do not have the ability to model a process that is inherently stochastic.</p>
+
+<p>For example, suppose we are generating 2D trajectories with the following procedure: we trace 2 revolutions of a circle (pattern A), and then we trace a triangle twice (pattern B). At this point with 33% chance we repeat pattern B, with 33% chance we do a figure eight twice (pattern C), or with 33% chance we return to pattern A.
+After pattern C we always return to pattern A.</p>
+
+<p><img src="/assets/img/circle2_triangle2_eight2_random.png" alt="random trace"></p>
+
+<p>The figure above goes through patterns A, B, A, B, C, A, B, B, C, A (or something like that). This is like a non-deterministic finite automaton where the transitions from A to B and from C to A are deterministic, but the transitions from B are stochastic, and can go to any other state with equal probability.</p>
+
+<p>If what you want is to generate non-repeating valid sequences containing the A, B, C patterns, there is no stochastic element in the RNNs, and nothing to learn the transition probabilities.</p>
+
+<p>Here is how the MTRNN fares when trying to learn the pattern of the figure above. Because the pattern is not periodic, it must learn to reproduce the whole trace in order to make a similar figure.</p>
+
+<p><img src="/assets/img/cte_mtrnn.png" alt="cte_mtrnn"></p>
+
+<p>On the other hand, the <a href="https://sergio-verduzco.github.io/2023/06/28/variational-autoencoder.html" rel="external nofollow noopener" target="_blank">variational autoencoder</a> (VAE) is capable of learning complex distributions and producing samples from them, but the standard VAE is not appropriate for modeling sequential data. Just like feedforward perceptrons, the VAE has a fixed input and output size, so taking inputs of varying lengths, or generating very long output sequences is problematic.</p>
+
+<p>If we could only combine the distribution-learning ability of the VAE with the RNNs’ ability to handle sequences…</p>
+
+<h2 id="the-variational-recurrent-neural-network-vrnn">The Variational Recurrent Neural Network (VRNN)</h2>
+<p>Your typical RNN works through repeated applications of a <em>cell</em>, that at time $t$ takes an input $x_t$ and the previous hidden state $h_{t-1}$. With this the cell produces a hidden state $h_{t}$ and an output $y_t$. Usually the cell is an LSTM or GRU layer. But what if our cell was a VAE?</p>
+
+<p>This is the premise of the VRNN, introduced in 2015 by <a href="https://papers.nips.cc/paper_files/paper/2015/file/b618c3210e934362ac261db280128c22-Paper.pdf" rel="external nofollow noopener" target="_blank">Chung et al.</a> The way it works is a combination of the procedures for using RNNs and VAEs. There are only 3 extra elements:</p>
+<ul>
+  <li>There is is an intermediate extraction of features for the input $\mathbf{x}_t$ and the latent variable $\mathbf{z}_t$, which the authors claim is required for good performance.</li>
+  <li>The normal distribution generating \(\mathbf{z}_t\) is no longer assumed to always have mean $\mathbf{0}$ and identity covariance matrix. Instead, the mean and the (diagonal) covariance matrix will depend on the previous hidden state $\mathbf{h}_{t-1}$. According to the authors, this secret sauce gives the model better representational power. The results support this claim, but the advantage it confers doesn’t seem to be dramatic.</li>
+  <li>When generating samples the decoder outputs parameters of a distribution that generates $\mathbf{x}$, rather than providing $\mathbf{x}$ directly. This is not unusual in RNNs, but it’s not how the original VAE operated.</li>
+</ul>
+
+<p>If you want to generate samples using a VRNN, you begin with an initial hidden state $\mathbf{h}_0$, usually a vector with zeros. Then:</p>
+<ol>
+  <li>Generate the first latent variable $\mathbf{z}_1$ in two steps.
+    <ol>
+      <li>Obtain the mean \(\mathbf{\mu}_{0,1}\) and covariance matrix \(\text{diag}(\mathbf{\sigma}_{0,1})\) of the prior distribution for \(\mathbf{z}\). This comes from the output of a network whose input is \(\mathbf{h}_0\), and is denoted by \(\varphi_\tau^{prior}(\mathbf{h}_0)\).</li>
+      <li>Sample \(\mathbf{z}_1\) from the distribution \(\mathcal{N}(\mathbf{\mu}_{0,1},\text{diag}(\mathbf{\sigma}_{0,1}))\).</li>
+    </ol>
+  </li>
+  <li>Extract features from \(\mathbf{z}_1\) using a network denoted by \(\varphi_\tau^{z}(\mathbf{z}_1)\).</li>
+  <li>Obtain the first synthetic value $\mathbf{x}_1$ in two steps.
+    <ol>
+      <li>Feed \(\varphi_\tau^{z}(\mathbf{z}_1)\) and $\mathbf{h}_0$ into the decoder to produce parameters \(\mathbf{\mu}_{x,1}\), \(\mathbf{\sigma}_{x,1}\).</li>
+      <li>Produce a value \(\mathbf{x}_1\) by sampling from the distribution \(\mathcal{N}(\mathbf{\mu}_{x,1}, \text{diag}(\mathbf{\sigma}_{x,1}))\).</li>
+    </ol>
+  </li>
+  <li>Extract features $\varphi_\tau^x(\mathbf{x}_1)$ using a neural network.</li>
+  <li>Update the hidden state: \(\mathbf{h}_1 = f_\theta\Big(\varphi_\tau^x(\mathbf{x}_1), \varphi_\tau^z(\mathbf{z}_1), \mathbf{h}_0 \Big)\)</li>
+</ol>
+
+<p>The rest of the procedure is just a repetition of the previous steps starting with the updated hidden state. The next figure illustrates this.</p>
+
+<p><img src="/assets/img/vrnn_generation.png" alt="vrnn generation"></p>
+
+<p>The procedure for training is not very different, but now at each step $t$ you will have an input $\mathbf{x}_t$ that you will stochastically reconstruct in two broad steps by</p>
+<ol>
+  <li>Obtaining a \(\mathbf{z}_t\) value using an encoder. This approximates sampling from \(p(\mathbf{z}_t \vert \mathbf{x}_{\leq t})\).</li>
+  <li>Obtaining a $\hat{\mathbf{x}}_t$ value using a decoder. This approximates sampling from \(p(\mathbf{x}_t \vert \mathbf{z}_t)\).</li>
+</ol>
+
+<p>After a full sequence \(\hat{\mathbf{x}}_1, \dots, \hat{\mathbf{x}}_{T}\) has been generated, gradient descent uses an objective function that is like the sum of $T$ VAE objective functions, one for each time step:
+\(\mathbb{E}_{q(\mathbf{z}_{\leq T}|\mathbf{x}_{\leq T})} \left[ \sum_{t=1}^T \Big(-\text{KL}(q(\mathbf{z}_t | \mathbf{x}_{\leq T}, \mathbf{z}_{&lt; T}) \|p(\mathbf{z}_t | \mathbf{x}_{&lt; T}, \mathbf{z}_{&lt; T})) + \log p(\mathbf{x}_t | \mathbf{x}_{\leq T}, \mathbf{z}_{&lt; T}) \Big) \right]\)</p>
+
+<p>The actual flow of computations can be seen in this figure:</p>
+
+<p><img src="/assets/img/vrnn_training.png" alt="vrnn learning"></p>
+
+<p>As with the VAE, we don’t actually calculate the expected values of the objective function. Instead we use stochastic gradient descent with individual sequences. A reconstruction error is used to reduce \(\log p(\mathbf{x}_t \vert \mathbf{x}_{\leq T}, \mathbf{z}_{&lt; T})\). Not shown in the figure above is that the reparameterization trick from VAEs is used in all sampling steps.</p>
+
+<p>Something that not clear from the “training computations” figure above is how we are going to train the network $\varphi_\tau^{prior}(\mathbf{h})$ that produces parameters for the prior distribution of $\mathbf{z}$ based on the previous hidden state $\mathbf{h}$. The answer is that during the forward passes in training we will also generate values \(\mathbf{\mu}_{0,t}, \mathbf{\sigma}_{0,t}\). The part of the loss function corresponding to the terms \(-\text{KL}(q(\mathbf{z}_t \vert \mathbf{x}_{\leq T}, \mathbf{z}_{&lt; T}) \|p(\mathbf{z}_t \vert \mathbf{x}_{&lt; T}, \mathbf{z}_{&lt; T}))\) uses \(\mathbf{\mu}_{0,t}, \mathbf{\sigma}_{0,t}\) to approximate \(p(\mathbf{z}_t \vert \mathbf{x}_{&lt; T}, \mathbf{z}_{&lt; T})\), and \(\mathbf{\mu}_{z,t}, \mathbf{\sigma}_{z,t}\) for the variational distribution \(q(\mathbf{z}_t \vert \mathbf{x}_{\leq T}, \mathbf{z}_{&lt; T})\).</p>
+
+<p>To implement the objective KL divergence part of the objective function you just need to find what this is in the case of two multivariate Gaussians.
+Because I didn’t want to spend time deriving this divergence I just looked it up, and found it at the last page of <a href="https://stanford.edu/~jduchi/projects/general_notes.pdf" rel="external nofollow noopener" target="_blank">this pdf</a> (among other places).</p>
+
+<h2 id="results">Results</h2>
+<p>There are quite a few elements in a VRNN, so it helps to look at previous implementations. The <a href="https://github.com/jych/nips2015_vrnn/tree/master" rel="external nofollow noopener" target="_blank">code</a> from the original paper uses the <a href="https://github.com/jych/cle" rel="external nofollow noopener" target="_blank">cle</a> framework, which is a bit dated. Instead, I found inspiration from this <a href="https://github.com/emited/VariationalRecurrentNeuralNetwork/tree/master" rel="external nofollow noopener" target="_blank">PyTorch implementation</a>. My own implementation can be seen <a href="https://github.com/sergio-verduzco/deep_explorations/blob/main/rnn/VRNN.ipynb" rel="external nofollow noopener" target="_blank">here</a>.</p>
+
+<h3 id="setting-metaparameters">Setting metaparameters</h3>
+
+<p>Basically, a VRNN will use 6 networks:</p>
+<ol>
+  <li>$\varphi_\tau^x(\mathbf{x}_t)$,</li>
+  <li>$\varphi_\tau^{prior}(\mathbf{h}_{t-1})$,</li>
+  <li>\(\varphi_\tau^{enc}(\varphi_\tau^x(\mathbf{x}_t), \mathbf{h}_{t-1})\),</li>
+  <li>$\varphi_\tau^z(\mathbf{x}_t)$,</li>
+  <li>\(\varphi_\tau^{dec}(\varphi_\tau^z(\mathbf{z}_t), \mathbf{h}_{t-1})\),</li>
+  <li>\(f_\theta \left( \varphi_\tau^x(\mathbf{x}_t), \varphi_\tau^z(\mathbf{z}_t), \mathbf{h}_{t-1} \right)\).</li>
+</ol>
+
+<p>To implement the VRNN you need to choose the metaparameters of these networks, and create code that applies them in the right order for inference and generation. With so many networks, choosing metaparameters is in fact one of the challenges.</p>
+
+<p>Given the task of generating the “circle-triangle-eight” pattern shown above I chose parameters with this reasoning:</p>
+<ul>
+  <li>$\mathbf{h}$ has to encode the basic shape of the patterns and the the current point in the cycle. 60 units should suffice.</li>
+  <li>The latent space needs to encode the current shape, and the amount of randomness that should be involved when choosing the next point. For this I deemed that at least two variables should be used, and to be sure I set the dimension of $\mathbf{z}$ to 10.</li>
+  <li>$\varphi^x_\tau$ and $\varphi^z_\tau$ “extract features” from $\mathbf{x}$ and $\mathbf{z}$. It seemed fitting that the number of features should be larger than the dimensions of $\mathbf{x}$ and $\mathbf{z}$, so those features could make an “explicit” representation. I set these as 1-layer networks with 10 units for \(\varphi^x_\tau\) and 16 units for \(\varphi^z_\tau\).</li>
+  <li>$\varphi^{prior}_\tau$ must produce the distribution for the latent variables given $\mathbf{h}$. I used a network with a 30-unit hidden layer.</li>
+  <li>\(\varphi^{enc}_\tau\) and $\varphi^{dec}_\tau$ must produce distribution parameters based on the current hidden state and on extracted features. \(\varphi^{enc}_\tau\) is a network with a 30-unit hidden layer, whereas \(\varphi^{dec}_\tau\) uses 40 units.</li>
+  <li>In the case of $f_{\theta}$ I used an GRU RNN with a single 60-unit layer.</li>
+</ul>
+
+<p>These are probably more units than necessary for the “circle-triangle-eight”, but in an initial exploration I am less concerned with overfitting, and more concerned with finding whether the network can do the task. I used smaller networks and an <a href="https://sergio-verduzco.github.io/2023/07/02/elman_rnn.html" rel="external nofollow noopener" target="_blank">Elman RNN</a> for the other experiments described below.</p>
+
+<p>As with the <a href="https://sergio-verduzco.github.io/2023/06/28/variational-autoencoder.html" rel="external nofollow noopener" target="_blank">VAE</a>, I used Mean Squared Error loss for the reconstruction error, and set an adaptive $w$ parameter to balance the magnitude of this error with the much larger output of the KL divergence between the prior and posterior $\mathbf{z}$ distributions.</p>
+
+<h3 id="a-rough-start">A rough start</h3>
+
+<p>After the code was completed the traces my network produced were random blotches. I assumed there was an error in my code, but going through each line didn’t reveal anything. After an embarrassingly long time I realized that the output of my encoder, decoder, and prior networks corresponding to means should <strong>not</strong> use ReLU units in the output layer, because then those outputs could not be negative…</p>
+
+<p>Once I modified the output of the networks, the VRNN could learn to generate the basic shapes I tested in the <a href="https://sergio-verduzco.github.io/2023/07/02/elman_rnn.html" rel="external nofollow noopener" target="_blank">Elman network</a>
+post. For example, here’s how it learned to trace a figure eight:</p>
+
+<p><img src="/assets/img/eight10_vrnn_500ep.png" alt="eight"></p>
+
+<p>The success in generating this figure hid the fact that there was still a fundamental bug in my code. This bug came from the fact that a regular RNN cell predicts \(\mathbf{x}_{t+1} \approx \mathbf{\hat{x}}_t\) given \(\mathbf{x}_t\) at time $t$, so the reconstruction error is the sum of elements like \(\| \mathbf{\hat{x}}_t - \mathbf{x}_{t+1} \|^2\). On the other hand, the VRNN tries to reproduce \(\mathbf{x}_t \approx \mathbf{\hat{x}}_t\) at time step $t$ given \(\mathbf{h}_{t-1}\). The reconstruction error thus has terms like \(\|\mathbf{x}_t - \mathbf{\hat{x}}_t \|^2\). My mistake was to use errors like \(\| \mathbf{\hat{x}}_t - \mathbf{x}_{t+1} \|^2\). Since $\mathbf{x}_t$ and \(\mathbf{x}_{t+1}\) are usually close the model “kind of worked”, and recognizing that there was an error took me a while.</p>
+
+<p>In the Appendix below I go through the sequence of experiments and ideas I had as the model failed to work well. When things went wrong I had to think about the VRNN and why it works, so the time wasn’t totally wasted. Also, this led me to set the adaptive $w$ ratio to $\frac{w \cdot DE}{RE} \approx 10$, which seems to produce good results.</p>
+
+<h3 id="a-basic-result">A basic result</h3>
+<p>In this first experiment the VRNN does something new: it changes its precision depending on the context:</p>
+
+<p><img src="/assets/img/one_side_vrnn_1100ep.png" alt="one side has more precision"></p>
+
+<p>In the original trace that we are trying to reproduce, the left side of the oval has much less variance than the right side. To some extent this is captured by the traces generated with the VRNN after enough training.</p>
+
+<h3 id="a-disappointing-result">A disappointing result</h3>
+<p>The next experiment I tried reproducing a stochastic “eye” pattern.</p>
+
+<p>In this pattern the wide oval is traced with probability 2/3, and the thin oval with probability 1/3, with transitions happening at the top, near the x=0, y=1 coordinate.</p>
+
+<p><img src="/assets/img/eye_vrnn_4800ep.png" alt="eye pattern generation"></p>
+
+<p>As can be seen, after 4800 epochs the VRNN could not replicate the process generating this pattern. Curiously, the reconstruction loss did get really low, which led me to wonder how well this network could reconstruct the original trace, mostly working as an autoencoder. If you reconstruct the trace using the “inference” mechanism (the one using during training) the reconstruction is quite close to the original.</p>
+
+<p><img src="/assets/img/eye_vrnn_4800ep_infer.png" alt="inference reconstruction of eye pattern"></p>
+
+<p>So with the right context the network can produce the pattern, but the generation mechanism is at this point insufficient.</p>
+
+<h2 id="appendix-experiments-with-a-predictive-vrnn">Appendix: experiments with a “predictive” VRNN</h2>
+
+<p>As described above, my VRNN implementation calculated the reconstruction loss incorrectly. In code:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>x, pmu, psig, mu, sig = vrnn(coords[:-1])
+RE = mse_loss(x, coords[1:])
+</code></pre></div></div>
+
+<p>So the loss function used a shift in the input coordinates, as is common in autoregressive models. But this should not be done with the VRNN.</p>
+
+<p>So I had just reproduced the figure 8 as shown previously. The interesting part was whether I would succeed with the “circle triangle eight” pattern.</p>
+
+<p>Here is how it looked (1000 points are generated for each trajectory below):</p>
+
+<p><img src="/assets/img/circle2_triangle2_eight2_nz10_3000epochs.png" alt="initial vrnn"></p>
+
+<p>The impression I had is that the transition points between patterns are far and few, so it is hard for the network to learn proper $\mathbf{z}_t$ representations. Basically, it is easier to just learn a single trajectory that approaches the points of the single example I provided for the network to learn.</p>
+
+<p>The first modification I used was to use GRU units for the $f_\theta$ network, which may help remember back to the transition points. I hoped that this and a large number of training epochs would do the trick. It did not, so I was left to wonder what was the problem.</p>
+
+<p>I wanted the decoder to produce 3 attractors (circle, triangle, eight), and to switch between them based on the latent variable $\mathbf{z}_t$, which would potentially change its value when two cycles of the B pattern (the triangle) were completed. Instead I found a single attractor contorting its shape to match the original trace.</p>
+
+<p>It didn’t seem like the latent variable was learning the transition points between patterns, and this should not be so surprising considering how sparse they are. My next move was to increase the training data, introducing 8 traces, each one with 5 to 10 transitions between patterns. This, together with GRU units, a VRNN with large layers, and enough training epochs should do the trick…</p>
+
+<p><img src="/assets/img/cte_gru_8tp_6800ep.png" alt="8 training patterns"></p>
+
+<p>No, it didn’t do the trick. What now?</p>
+
+<p>One thing I noticed is that the loss had become really small ($\approx$ 0.0001), both for the reconstruction error, and for $w$ times the KL divergence. The loss in the distribution of $\mathbf{z}$ was small, and yet the performance was poor. Perhaps setting $w$ so that $\frac{w \cdot DE}{RE} \approx 1$ was not so good in this case (see the VAE post). As a first variation I tried to set the initial $w=0$ value, and then adjust $w$ adaptive to approach the ratio $\frac{w \cdot DE}{RE} \approx 10$.</p>
+
+<p>Another observation is that the circle-triangle-eight trajectory with two cycles of each shape is a challenging figure to trace. Given my lack of success, it may be better to try a simpler pattern, which I did.</p>
+
+<p>For the next round of attempts I used the following “eye” pattern:</p>
+
+<p><img src="/assets/img/long_eye.png" alt="eye pattern"></p>
+
+<p>In this pattern when the pen is at the top, with probability 2/3 a wide oval will be traced, and with probability 1/3 a thin oval will be traced. Around 30 of these transitions were included in a single figure. Results from learning this pattern can be seen below.</p>
+
+<p><img src="/assets/img/eye_vrnn_gru_1100ep.png" alt="eye results"></p>
+
+<p>A this point I had this thought: a network that only traces the wide oval will reduce the loss just as much as a network that traces the wide oval with probability 2/3, and the thin oval with probability 1/3.</p>
+
+<p>Because generation is stochastic, a “perfect” model only has probability 5/9 of matching the training data on any given cycle: the model matches the training data when 1) both are wide (with probability 4/9), and 2) both are thin (with probability 1/9). On the other hand, a “lazy” model that only traces the wide ovals will match the training data 66% of the time. This argument ignores differences in the phase caused by the thin oval being smaller, but those should be similar for both models.</p>
+
+<p>In light of this, the reconstruction loss is not sufficient for learning the type of model we desire. Something must pressure the discovery of “transitions between patterns” at particular points. The question is why \(\text{KL}(q(\mathbf{z}_t \vert \mathbf{x}_{\leq T}, \mathbf{z}_{&lt; T}) \|p(\mathbf{z}_t \vert \mathbf{x}_{&lt; T}, \mathbf{z}_{&lt; T}))\), should be able to do this. As far as I can tell, it can’t. You really need
+\(\mathbb{E}_{q(\mathbf{z}\leq T \vert \mathbf{x}\leq T)} \Big[ \text{KL}(q(\mathbf{z}_t \vert \mathbf{x}_{\leq T}, \mathbf{z}_{&lt; T}) \|p(\mathbf{z}_t \vert \mathbf{x}_{&lt; T}, \mathbf{z}_{&lt; T})) \Big]\), or in other words, a long number of training epochs with small learning rates.</p>
+
+
+    </div>
+  </article>
+
+
+  
+    
+    <br>
+    <hr>
+    <br>
+    <ul class="list-disc pl-8"></ul>
+
+    <!-- Adds related posts to the end of an article -->
+    <h2 class="text-3xl font-semibold mb-4 mt-12">Enjoy Reading This Article?</h2>
+    <p class="mb-2">Here are some more articles you might like to read next:</p>
+  
+
+  <li class="my-2">
+    <a class="text-pink-700 underline font-semibold hover:text-pink-800" href="/blog/2023/roam_migration/">Migrating from Roam to Logseq with lots of uploaded files</a>
+  </li>
+
+  
+
+  <li class="my-2">
+    <a class="text-pink-700 underline font-semibold hover:text-pink-800" href="/blog/2023/pvrnn/">PV-RNN has the weirdest bugs</a>
+  </li>
+
+  
+
+  <li class="my-2">
+    <a class="text-pink-700 underline font-semibold hover:text-pink-800" href="/blog/2023/mtrnn/">Multiple-Timescales Recurrent Neural Networks (MTRNNs)</a>
+  </li>
+
+  
+
+  <li class="my-2">
+    <a class="text-pink-700 underline font-semibold hover:text-pink-800" href="/blog/2023/elman_rnn/">The Elman RNN</a>
+  </li>
+
+  
+
+  <li class="my-2">
+    <a class="text-pink-700 underline font-semibold hover:text-pink-800" href="/blog/2023/variational-autoencoder/">The variational autoencoder from scratch: an exercise in balance</a>
+  </li>
+
+</div>
+
+      
+    </div>
+
+    <!-- Footer -->    
+    <footer class="fixed-bottom">
+      <div class="container mt-0">
+        © Copyright 2023 Sergio O. Verduzco. Powered by <a href="https://jekyllrb.com/" target="_blank" rel="external nofollow noopener">Jekyll</a> with <a href="https://github.com/alshedivat/al-folio" rel="external nofollow noopener" target="_blank">al-folio</a> theme. Hosted by <a href="https://pages.github.com/" target="_blank" rel="external nofollow noopener">GitHub Pages</a>.
+
+      </div>
+    </footer>
+
+    <!-- JavaScripts -->
+    <!-- jQuery -->
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+
+    <!-- Bootsrap & MDB scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js" integrity="sha256-fgLAgv7fyCGopR/gBNq2iW3ZKIdqIcyshnUULC4vex8=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mdbootstrap@4.20.0/js/mdb.min.js" integrity="sha256-NdbiivsvWt7VYCt6hYNT3h/th9vSTL4EDWeGs5SN3DA=" crossorigin="anonymous"></script>
+
+    <!-- Masonry & imagesLoaded -->
+  <script defer src="https://cdn.jsdelivr.net/npm/masonry-layout@4.2.2/dist/masonry.pkgd.min.js" integrity="sha256-Nn1q/fx0H7SNLZMQ5Hw5JLaTRZp0yILA/FRexe19VdI=" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/imagesloaded@4/imagesloaded.pkgd.min.js"></script>
+  <script defer src="/assets/js/masonry.js" type="text/javascript"></script>
+    
+  <!-- Medium Zoom JS -->
+  <script defer src="https://cdn.jsdelivr.net/npm/medium-zoom@1.0.8/dist/medium-zoom.min.js" integrity="sha256-7PhEpEWEW0XXQ0k6kQrPKwuoIomz8R8IYyuU1Qew4P8=" crossorigin="anonymous"></script>
+  <script defer src="/assets/js/zoom.js"></script>
+
+  <!-- Bootstrap Table -->
+  <script defer src="https://unpkg.com/bootstrap-table@1.21.4/dist/bootstrap-table.min.js"></script>
+
+  <!-- Load Common JS -->
+  <script src="/assets/js/no_defer.js?d633890033921b33e0ceb13d22340a9c"></script>
+  <script defer src="/assets/js/common.js?acdb9690d7641b2f8d40529018c71a01"></script>
+  <script defer src="/assets/js/copy_code.js?c9d9dd48933de3831b3ee5ec9c209cac" type="text/javascript"></script>
+
+    
+  <script async src="https://d1bxh8uas1mnw7.cloudfront.net/assets/embed.js"></script>
+  <script async src="https://badge.dimensions.ai/badge.js"></script>
+
+    <!-- MathJax -->
+  <script type="text/javascript">
+    window.MathJax = {
+      tex: {
+        tags: 'ams'
+      }
+    };
+  </script>
+  <script defer type="text/javascript" id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js"></script>
+  <script defer src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+
+    
+    
+
+<!-- Scrolling Progress Bar -->
+<script type="text/javascript">
+  /*
+   * This JavaScript code has been adapted from the article 
+   * https://css-tricks.com/reading-position-indicator/ authored by Pankaj Parashar, 
+   * published on the website https://css-tricks.com on the 7th of May, 2014.
+   * Couple of changes were made to the original code to make it compatible 
+   * with the `al-foio` theme.
+   */
+  const progressBar = $("#progress");
+  /*
+   * We set up the bar after all elements are done loading.
+   * In some cases, if the images in the page are larger than the intended
+   * size they'll have on the page, they'll be resized via CSS to accomodate
+   * the desired size. This mistake, however, breaks the computations as the
+   * scroll size is computed as soon as the elements finish loading.
+   * To account for this, a minimal delay was introduced before computing the
+   * values.
+   */
+  window.onload = function () {
+    setTimeout(progressBarSetup, 50);
+  };
+  /*
+   * We set up the bar according to the browser.
+   * If the browser supports the progress element we use that.
+   * Otherwise, we resize the bar thru CSS styling
+   */
+  function progressBarSetup() {
+    if ("max" in document.createElement("progress")) {
+      initializeProgressElement();
+      $(document).on("scroll", function() {
+        progressBar.attr({ value: getCurrentScrollPosition() });
+      });
+      $(window).on("resize", initializeProgressElement);
+    } else {
+      resizeProgressBar();
+      $(document).on("scroll", resizeProgressBar);
+      $(window).on("resize", resizeProgressBar);
+    }
+  }
+  /*
+   * The vertical scroll position is the same as the number of pixels that
+   * are hidden from view above the scrollable area. Thus, a value > 0 is
+   * how much the user has scrolled from the top
+   */
+  function getCurrentScrollPosition() {
+    return $(window).scrollTop();
+  }
+
+  function initializeProgressElement() {
+    let navbarHeight = $("#navbar").outerHeight(true);
+    $("body").css({ "padding-top": navbarHeight });
+    $("progress-container").css({ "padding-top": navbarHeight });
+    progressBar.css({ top: navbarHeight });
+    progressBar.attr({
+      max: getDistanceToScroll(),
+      value: getCurrentScrollPosition(),
+    });
+  }
+  /*
+   * The offset between the html document height and the browser viewport
+   * height will be greater than zero if vertical scroll is possible.
+   * This is the distance the user can scroll
+   */
+  function getDistanceToScroll() {
+    return $(document).height() - $(window).height();
+  }
+
+  function resizeProgressBar() {
+    progressBar.css({ width: getWidthPercentage() + "%" });
+  }
+  // The scroll ratio equals the percentage to resize the bar
+  function getWidthPercentage() {
+    return (getCurrentScrollPosition() / getDistanceToScroll()) * 100;
+  }
+</script>
+
+  </body>
+</html>

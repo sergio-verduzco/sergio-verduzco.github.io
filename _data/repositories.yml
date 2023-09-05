@@ -1,12 +1,6 @@
-github_users:
-  - torvalds
-  - alshedivat
 
 github_repos:
-  - alshedivat/al-folio
-  - twbs/bootstrap
-  - jekyll/jekyll
-  - jquery/jquery
-  - FortAwesome/Font-Awesome
-  - jpswalsh/academicons
-  - mathjax/MathJax
+  - sergio-verduzco/deep_explorations
+  - sergio-verduzco/draculab
+  - sergio-verduzco/arm_control_3D
+  - sergio-verduzco/lsad

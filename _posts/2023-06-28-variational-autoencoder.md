@@ -1,7 +1,7 @@
 ---
 title: "The variational autoencoder from scratch: an exercise in balance"
 date: 2023-06-28
-usemathjax: true
+layout: post
 ---
 
 In this post I wrote some thoughts on what the Variational Autoencoder (VAE) is supposed to do, and on ideas I got while programming it from scratch.
@@ -30,7 +30,7 @@ I'll skip all the math (there are better explanations out there), and jump into 
 
 The VAE is this stochastic machine:
 
-![vae architecture](/assets/vae.png)
+![vae architecture](/assets/img/vae.png)
 
 This machine takes the original high-dimensional input $\mathbf{x}$ (e.g. images), and stochastically produces a "reconstructed" version of $\mathbf{x}$, denoted by $\hat{\mathbf{x}}$. 
 
@@ -65,7 +65,7 @@ I trained the encoder to produce $\mu, \text{diag}(\Sigma)$ values. Unbeknownst 
 
 The first time that I trained my VAE to produce images of digits based on the MNIST dataset all the samples would produce the same image, which looked a bit like an "average number".
 
-![vae 2D no balance](/assets/vae_2D_unbalanced.png)
+![vae 2D no balance](/assets/img/vae_2D_unbalanced.png)
 
 The VAE for this image has a 2D latent variable $\mathbf{z}$, and there is a 10x10 grid of $\mathbf{z}$ values where each dimension ranges from -2 to 2. Training proceeded for 10 epochs.
 
@@ -77,11 +77,11 @@ The easy fix was to modify the loss function as
 $$ \mathcal{L} = RE + w \cdot DE $$
 where $w=0.001$. This allowed reconstruction of the digits.
 
-![vae 2D balance](/assets/vae_2D_balanced1.png)
+![vae 2D balance](/assets/img/vae_2D_balanced1.png)
 
 Finding a good value of $w$ was quite time consuming. I decided to try to automate this process using this criterion: on average, $RE$ should have a similar magnitude to $w RE$. In other words, at every iteration slightly modify $w$ so that $\frac{wDE}{RE} \approx 1$. The ratio of 1 is an arbitrary quantity, but worked well for this example.
 
-![vae 2D balance 2](/assets/vae_2D_balanced2.png)
+![vae 2D balance 2](/assets/img/vae_2D_balanced2.png)
 
 What I did was to start with $w=0$, and then on every minibatch to adust its value as 
 $$\Delta w = \alpha (RE - wDE)$$
@@ -92,6 +92,6 @@ I did't know it at the time, but what I had conjured was a variation of the __KL
 ### Bonus:
 Using a single latent variable we get
 
-![vae 1D](/assets/vae_1D.png)
+![vae 1D](/assets/img/vae_1D.png)
 
 A lot of information gets stored in a single $z$ value!

@@ -1,7 +1,7 @@
 ---
 title: "Migrating from Roam to Logseq with lots of uploaded files"
 date: 2023-09-02
-usemathjax: true
+layout: post
 ---
 
 Taking notes is a basic aspect of my job as a researcher and as a student. More than that, for a long time
@@ -12,9 +12,9 @@ for the right note-taking tools.
 Over the years I've gone from using a MySQL database to mindmaps (mostly [Freeplane](https://docs.freeplane.org/)) to [TiddlyWiki](https://tiddlywiki.com/). When I got to [Evernote](https://evernote.com/) I felt things
 were starting to come together, but something was still missing.
 
-Back in 2020 I started using [Roam Research](https://roamresearch.com/) and
-my note-taking needs were almost fulfilled. It's just that Roam is subscription software, not open-source, and stores your data remotely. I'm against all that, but Roam treated me well. So well that for 3 years I was
-in denial, and continued paying every month.
+Back in 2020 I started using [Roam Research](https://roamresearch.com/), and
+my note-taking needs were almost fulfilled. But not quite. Roam is subscription software, not open-source, and stores your data remotely. I'm against all that, but Roam treated me well. So well, that for 3 years I was
+in denial, paying every month.
 
 But behold the goodness of [Logseq](https://logseq.com/)!
 
