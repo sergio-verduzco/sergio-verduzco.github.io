@@ -24,7 +24,7 @@ Working with latent variables (denoted here by $\mathbf{z}$) has at least two bi
 
 ## The VAE
 
-The [variational autoencoder](https://arxiv.org/abs/1312.6114) is an architecture capable of learning the latent variables $\mathbf{z}$ that correspond to a given input $\mathbf{x}$ (in other words, approximately learning the distribution $p(\mathbf{z} \vert \mathbf{x})$), and of producing a decoder network that, given $\mathbf{z}$, yields a corresponding value of $\mathbf{x}$. Moreover, the $\mathbf{z}$ variables it learns are such that $p(\mathbf{z})$ is close to a multivariate normal distribution, so we can sample $\mathbf{z}$ values and feed them to the decoder in order to produce synthetic data!
+The [variational autoencoder](https://arxiv.org/abs/1312.6114) is an architecture capable of learning the latent variables $\mathbf{z}$ that correspond to a given input $\mathbf{x}$ (in other words, approximately learning the distribution $$p(\mathbf{z} \vert \mathbf{x})$$), and of producing a decoder network that, given $\mathbf{z}$, yields a corresponding value of $\mathbf{x}$. Moreover, the $\mathbf{z}$ variables it learns are such that $p(\mathbf{z})$ is close to a multivariate normal distribution, so we can sample $\mathbf{z}$ values and feed them to the decoder in order to produce synthetic data!
 
 I'll skip all the math (there are better explanations out there), and jump into what the VAE is computationally, what is the intuition, and how you train it.
 
