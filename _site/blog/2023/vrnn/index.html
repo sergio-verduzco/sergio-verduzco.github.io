@@ -38,14 +38,14 @@
     
     <link rel="shortcut icon" href="data:image/svg+xml,&lt;svg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20100%20100%22&gt;&lt;text%20y=%22.9em%22%20font-size=%2290%22&gt;%E2%9A%9B%EF%B8%8F&lt;/text&gt;&lt;/svg&gt;">
     
-    <link rel="stylesheet" href="/assets/css/main.css?d41d8cd98f00b204e9800998ecf8427e">
+    <link rel="stylesheet" href="/assets/css/main.css">
     <link rel="canonical" href="http://localhost:4000/blog/2023/vrnn/">
 
     <!-- Dark Mode -->
     
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jwarby/jekyll-pygments-themes@master/native.css" media="none" id="highlight_theme_dark">
-    <script src="/assets/js/theme.js?96d6b3e1c3604aca8b6134c7afdd5db6"></script>
-    <script src="/assets/js/dark_mode.js?9b17307bb950ffa2e34be0227f53558f"></script>
+    <script src="/assets/js/theme.js"></script>
+    <script src="/assets/js/dark_mode.js"></script>
     
 
   </head>
@@ -170,7 +170,7 @@ After pattern C we always return to pattern A.</p>
 
 <p>The figure above goes through patterns A, B, A, B, C, A, B, B, C, A (or something like that). This is like a non-deterministic finite automaton where the transitions from A to B and from C to A are deterministic, but the transitions from B are stochastic, and can go to any other state with equal probability.</p>
 
-<p>If what you want is to generate non-repeating valid sequences containing the A, B, C patterns, there is no stochastic element in the RNNs, and nothing to learn the transition probabilities.</p>
+<p>If what you want is to generate non-repeating valid sequences containing the A, B, C patterns, a deterministic RNN has no way of learning the probabily of a transition.</p>
 
 <p>Here is how the MTRNN fares when trying to learn the pattern of the figure above. Because the pattern is not periodic, it must learn to reproduce the whole trace in order to make a similar figure.</p>
 
@@ -195,7 +195,7 @@ After pattern C we always return to pattern A.</p>
   <li>Generate the first latent variable \(\mathbf{z}_1\) in two steps.
     <ol>
       <li>Obtain the mean \(\mathbf{\mu}_{0,1}\) and covariance matrix \(\text{diag}(\mathbf{\sigma}_{0,1})\) of the prior distribution for \(\mathbf{z}\). This comes from the output of a network whose input is \(\mathbf{h}_0\), and is denoted by \(\varphi_\tau^{prior}(\mathbf{h}_0)\).</li>
-      <li>Sample \(\mathbf{z}_1\) from the distribution \(\mathcal{N}(\mathbf{\mu}_{0,1},\text{diag}(\mathbf{\sigma}_{0,1}))\).</li>
+      <li>Sample \(\mathbf{z}_1\) from the distribution \(\mathcal{N}(\mathbf{\mu}_{0,1},\text{diag}(\mathbf{\sigma}_{0,1}))\) (with the reparameterization trick).</li>
     </ol>
   </li>
   <li>Extract features from \(\mathbf{z}_1\) using a network denoted by \(\varphi_\tau^{z}(\mathbf{z}_1)\).</li>
@@ -220,15 +220,15 @@ After pattern C we always return to pattern A.</p>
 </ol>
 
 <p>After a full sequence \(\hat{\mathbf{x}}_1, \dots, \hat{\mathbf{x}}_{T}\) has been generated, gradient descent uses an objective function that is like the sum of $T$ VAE objective functions, one for each time step:
-\(\mathbb{E}_{q(\mathbf{z}_{\leq T}|\mathbf{x}_{\leq T})} \left[ \sum_{t=1}^T \Big(-\text{KL}(q(\mathbf{z}_t | \mathbf{x}_{\leq T}, \mathbf{z}_{&lt; T}) \|p(\mathbf{z}_t | \mathbf{x}_{&lt; T}, \mathbf{z}_{&lt; T})) + \log p(\mathbf{x}_t | \mathbf{x}_{\leq T}, \mathbf{z}_{&lt; T}) \Big) \right]\)</p>
+\(\mathbb{E}_{q(\mathbf{z}_{\leq T}|\mathbf{x}_{\leq T})} \left[ \sum_{t=1}^T \Big(-\text{KL}(q(\mathbf{z}_t | \mathbf{x}_{\leq t}, \mathbf{z}_{&lt; t}) \|p(\mathbf{z}_t | \mathbf{x}_{&lt; t}, \mathbf{z}_{&lt; t})) + \log p(\mathbf{x}_t | \mathbf{x}_{\leq t}, \mathbf{z}_{&lt; t}) \Big) \right]\)</p>
 
 <p>The actual flow of computations can be seen in this figure:</p>
 
 <p><img src="/assets/img/vrnn_training.png" alt="vrnn learning"></p>
 
-<p>As with the VAE, we don’t actually calculate the expected values of the objective function. Instead we use stochastic gradient descent with individual sequences. A reconstruction error is used to reduce \(\log p(\mathbf{x}_t \vert \mathbf{x}_{\leq T}, \mathbf{z}_{&lt; T})\). Not shown in the figure above is that the reparameterization trick from VAEs is used in all sampling steps.</p>
+<p>As with the VAE, we don’t actually calculate the expected values of the objective function. Instead we use stochastic gradient descent with individual sequences. A reconstruction error is used to reduce \(\log p(\mathbf{x}_t \vert \mathbf{x}_{\leq t}, \mathbf{z}_{&lt; t})\). Not shown in the figure above is that the reparameterization trick from VAEs is used in all sampling steps.</p>
 
-<p>Something that not clear from the “training computations” figure above is how we are going to train the network $\varphi_\tau^{prior}(\mathbf{h})$ that produces parameters for the prior distribution of $\mathbf{z}$ based on the previous hidden state $\mathbf{h}$. The answer is that during the forward passes in training we will also generate values \(\mathbf{\mu}_{0,t}, \mathbf{\sigma}_{0,t}\). The part of the loss function corresponding to the terms \(-\text{KL}(q(\mathbf{z}_t \vert \mathbf{x}_{\leq T}, \mathbf{z}_{&lt; T}) \|p(\mathbf{z}_t \vert \mathbf{x}_{&lt; T}, \mathbf{z}_{&lt; T}))\) uses \(\mathbf{\mu}_{0,t}, \mathbf{\sigma}_{0,t}\) to approximate \(p(\mathbf{z}_t \vert \mathbf{x}_{&lt; T}, \mathbf{z}_{&lt; T})\), and \(\mathbf{\mu}_{z,t}, \mathbf{\sigma}_{z,t}\) for the variational distribution \(q(\mathbf{z}_t \vert \mathbf{x}_{\leq T}, \mathbf{z}_{&lt; T})\).</p>
+<p>Something that not clear from the “training computations” figure above is how we are going to train the network $\varphi_\tau^{prior}(\mathbf{h})$ that produces parameters for the prior distribution of $\mathbf{z}$ based on the previous hidden state $\mathbf{h}$. The answer is that during the forward passes in training we will also generate values \(\mathbf{\mu}_{0,t}, \mathbf{\sigma}_{0,t}\). The part of the loss function corresponding to the terms \(-\text{KL}(q(\mathbf{z}_t \vert \mathbf{x}_{\leq t}, \mathbf{z}_{&lt; t}) \|p(\mathbf{z}_t \vert \mathbf{x}_{&lt; t}, \mathbf{z}_{&lt; t}))\) uses \(\mathbf{\mu}_{0,t}, \mathbf{\sigma}_{0,t}\) to characterize the distirbution of \(p(\mathbf{z}_t \vert \mathbf{x}_{&lt; t}, \mathbf{z}_{&lt; t})\), and \(\mathbf{\mu}_{z,t}, \mathbf{\sigma}_{z,t}\) for the variational distribution \(q(\mathbf{z}_t \vert \mathbf{x}_{\leq t}, \mathbf{z}_{&lt; t})\).</p>
 
 <p>To implement the objective KL divergence part of the objective function you just need to find what this is in the case of two multivariate Gaussians.
 Because I didn’t want to spend time deriving this divergence I just looked it up, and found it at the last page of <a href="https://stanford.edu/~jduchi/projects/general_notes.pdf" rel="external nofollow noopener" target="_blank">this pdf</a> (among other places).</p>
@@ -257,7 +257,7 @@ Because I didn’t want to spend time deriving this divergence I just looked it 
   <li>$\varphi^x_\tau$ and $\varphi^z_\tau$ “extract features” from $\mathbf{x}$ and $\mathbf{z}$. It seemed fitting that the number of features should be larger than the dimensions of $\mathbf{x}$ and $\mathbf{z}$, so those features could make an “explicit” representation. I set these as 1-layer networks with 10 units for \(\varphi^x_\tau\) and 16 units for \(\varphi^z_\tau\).</li>
   <li>$\varphi^{prior}_\tau$ must produce the distribution for the latent variables given $\mathbf{h}$. I used a network with a 30-unit hidden layer.</li>
   <li>\(\varphi^{enc}_\tau\) and $\varphi^{dec}_\tau$ must produce distribution parameters based on the current hidden state and on extracted features. \(\varphi^{enc}_\tau\) is a network with a 30-unit hidden layer, whereas \(\varphi^{dec}_\tau\) uses 40 units.</li>
-  <li>In the case of $f_{\theta}$ I used an GRU RNN with a single 60-unit layer.</li>
+  <li>In the case of $f_{\theta}$ I used a single 60-unit layer that could optionally use GRU units.</li>
 </ul>
 
 <p>These are probably more units than necessary for the “circle-triangle-eight”, but in an initial exploration I am less concerned with overfitting, and more concerned with finding whether the network can do the task. I used smaller networks and an <a href="https://sergio-verduzco.github.io/2023/07/02/elman_rnn.html" rel="external nofollow noopener" target="_blank">Elman RNN</a> for the other experiments described below.</p>
@@ -284,18 +284,55 @@ post. For example, here’s how it learned to trace a figure eight:</p>
 
 <p>In the original trace that we are trying to reproduce, the left side of the oval has much less variance than the right side. To some extent this is captured by the traces generated with the VRNN after enough training.</p>
 
-<h3 id="a-disappointing-result">A disappointing result</h3>
-<p>The next experiment I tried reproducing a stochastic “eye” pattern.</p>
+<h3 id="mixed-results">Mixed results</h3>
+<p>The next experiment I tried reproducing a stochastic “eye” pattern, using GRU units.</p>
 
 <p>In this pattern the wide oval is traced with probability 2/3, and the thin oval with probability 1/3, with transitions happening at the top, near the x=0, y=1 coordinate.</p>
 
-<p><img src="/assets/img/eye_vrnn_4800ep.png" alt="eye pattern generation"></p>
+<p><img src="/assets/img/eye_vrnn_gru_10000ep.png" alt="eye pattern generation"></p>
 
-<p>As can be seen, after 4800 epochs the VRNN could not replicate the process generating this pattern. Curiously, the reconstruction loss did get really low, which led me to wonder how well this network could reconstruct the original trace, mostly working as an autoencoder. If you reconstruct the trace using the “inference” mechanism (the one using during training) the reconstruction is quite close to the original.</p>
+<p>As can be seen, the VRNN does not seem to have two patterns which it switches stochastically.
+It seems to have a single pattern that approaches the original trace to some extent.
+Curiously, the reconstruction loss did get really low, which led me to wonder how well this network could reconstruct the original trace, mostly working as an autoencoder. If you reconstruct the trace using the “inference” mechanism (the one using during training) the reconstruction is quite close to the original.</p>
 
-<p><img src="/assets/img/eye_vrnn_4800ep_infer.png" alt="inference reconstruction of eye pattern"></p>
+<p><img src="/assets/img/eye_vrnn_gru_10000ep_infer.png" alt="inference reconstruction of eye pattern"></p>
 
-<p>So with the right context the network can produce the pattern, but the generation mechanism is at this point insufficient.</p>
+<p>So with the right context the network can produce the pattern, but the generation mechanism is at this point insufficient.
+Reminiscent of the issues I had with the VAE, the VRNN seemed to be ignoring
+the latent variable $\mathbf{z}$, and working like a regular RNN.</p>
+
+<h3 id="the-vae-optimization-challenge-versus-the-vrnn-optimization-issues">The VAE “optimization challenge” versus the VRNN optimization issues</h3>
+<p>In my <a href="https://sergio-verduzco.github.io/blog/2023/variational-autoencoder/" rel="external nofollow noopener" target="_blank">VAE post</a>
+I mentioned <a href="https://arxiv.org/abs/1511.06349" rel="external nofollow noopener" target="_blank">Bowman et. al 2015</a>. In this paper it is
+pointed out that when training the VAE it is common that the $q(\mathbf{z} \vert \mathbf{x})$
+parameters you learn tend to become equal to those of the $p(\mathbf{z})$ prior, so the
+KL divergence error is almost zero, and $\mathbf{z}$ does not get used.
+The VAE, however, is a different architecture from the
+VRNN. The VRNN is also different from architectures that use a VAE with a RNN in the
+encoder and/or the decoder (e.g. <a href="https://arxiv.org/abs/1511.06349" rel="external nofollow noopener" target="_blank">Bowman et. al 2015</a>,
+or <a href="https://arxiv.org/pdf/1611.02731.pdf" rel="external nofollow noopener" target="_blank">Chen et al. 2017</a>). The question is: does the
+optimization challenge of VAEs surface somehow in VRNNs? Is this what I was facing?</p>
+
+<p>In the case of the VAE optimization challenge, the posterior distribution of the latent
+variable “collapsed” into the prior due to the KL divergence term in the loss function.
+In the case of the VRNN the posterior and the prior are both functions of the hidden state
+\(\mathbf{h}_{t-1}\), and although the KL divergence term still encourages the prior
+\(\varphi_\tau^{prior}(h_{t-1})\) to resemble the posterior
+\(\varphi_\tau^{enc}(\varphi_\tau^{x}(\mathbf{x}_t), h_{t-1})\), in my simulations the
+error from the KL term was relatively large, whereas the reconstruction error was very
+small. The figure above (original trace vs inferred trace) shows this. 
+The problem I had did not resemble the VAE optimization challenge in these regards.</p>
+
+<p>The latent variable \(\mathbf{z}_t\) does seem to capture information about
+\(\mathbf{x}_t\), but it doesn’t seem to encode the “random structure” of the pattern,
+which in the above example could mean whether we are tracing a wide or a narrow circle.
+By using a relatively high-dimensional $\mathbf{z}$ value I was allowing the encoder to
+maintain all the information about $\mathbf{x}$, and by using a relatively large and
+powerful \(\varphi_\tau^{enc}\) network I was allowing it to simply invert whatever
+transformation the encoder was doing, driving the reconstruction error down.</p>
+
+<p>A possible solution was therefore to reduce the dimension of $\mathbf{z}$, and use less
+powerful encoder and decoder networks.</p>
 
 <h2 id="appendix-experiments-with-a-predictive-vrnn">Appendix: experiments with a “predictive” VRNN</h2>
 
@@ -381,9 +418,9 @@ RE = mse_loss(x, coords[1:])
   <script defer src="https://unpkg.com/bootstrap-table@1.21.4/dist/bootstrap-table.min.js"></script>
 
   <!-- Load Common JS -->
-  <script src="/assets/js/no_defer.js?d633890033921b33e0ceb13d22340a9c"></script>
-  <script defer src="/assets/js/common.js?acdb9690d7641b2f8d40529018c71a01"></script>
-  <script defer src="/assets/js/copy_code.js?c9d9dd48933de3831b3ee5ec9c209cac" type="text/javascript"></script>
+  <script src="/assets/js/no_defer.js"></script>
+  <script defer src="/assets/js/common.js"></script>
+  <script defer src="/assets/js/copy_code.js" type="text/javascript"></script>
 
     
   <script async src="https://d1bxh8uas1mnw7.cloudfront.net/assets/embed.js"></script>
