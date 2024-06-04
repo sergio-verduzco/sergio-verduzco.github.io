@@ -29,7 +29,7 @@ Since you usually know the sizes of the input, output, stride, kernel, and dilat
 ```python
 import math
 
-def padding(input_dim, output_dim, stride, kernel_size, dilation):
+def padding_fun(input_dim, output_dim, stride, kernel_size, dilation):
     """Calculate the padding for a convolution.
 
     The padding is calculated to attain the desired input and output
@@ -230,6 +230,7 @@ $$ o = \lfloor \frac{i + (i-1)(\delta-1) + 2p -k - (k-1)(d-1)}{s} \rfloor + 1 $$
 
 We need to update our padding function in order to handle input dilations:
 ```python
+
 def padding2(input_dim, output_dim, stride, kernel_size, dilation, inp_dilation):
     """Calculate the padding for a convolution.
 
@@ -248,17 +249,28 @@ def padding2(input_dim, output_dim, stride, kernel_size, dilation, inp_dilation)
     :type stride: int
     :param kernel_size: kernel size
     :type kernel_size: int
-    :param dilation: dilation
+    :param dilation: dilation of the kernel
     :type dilation: int
     :param inp_dilation: dilation of the input
     :type inp_dilation: int
-    :returns: padding for the convolution, residual value
+    :returns: padding for the convolution, residual value.
     :rtype: int, int
     """
     pad = 0.5 * (stride * (output_dim - 1) - input_dim - (input_dim - 1) * (inp_dilation - 1)
              + dilation * (kernel_size - 1) + 1)
-    r = math.ceil(pad % 1)
-    return math.floor(pad), r
+    err_msg = f"Incompatible values: kernel:{kernel_size}, stride:{stride}, " + \
+              f"input:{input_dim}, output:{output_dim} are incompatible"
+    print(f"pad: {pad}")
+    if pad > 0:
+        r = math.ceil(pad % 1)
+        pad = math.floor(pad)
+        assert ( output_dim ==  
+            math.floor((input_dim + (input_dim - 1) * (inp_dilation - 1) +
+                        2 * pad + r - dilation * (kernel_size - 1) - 1) / stride) + 1
+            ), err_msg
+    else:
+        raise ValueError(err_msg)
+    return pad, r
 ```
 
 With this you can handle even the trickiest pairs of direct-transpose convolutions, just remember to test that the shapes are correct before deploying.
